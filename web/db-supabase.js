@@ -28,7 +28,9 @@
     };
     Doc.prototype.set = async function (data) {
       var user = (await sb.auth.getUser()).data.user;
-      assertOk(await sb.from('docs').upsert({ collection: this.coll, id: this.id, data: data, updated_at: new Date().toISOString(), created_by: user ? user.id : null }, { onConflict: 'collection,id' }));
+      var ex = assertOk(await sb.from('docs').select('created_by').eq('collection', this.coll).eq('id', this.id).limit(1));
+      var owner = ex && ex.length ? ex[0].created_by : (user ? user.id : null);
+      assertOk(await sb.from('docs').upsert({ collection: this.coll, id: this.id, data: data, updated_at: new Date().toISOString(), created_by: owner }, { onConflict: 'collection,id' }));
     };
     Doc.prototype.update = async function (patch) {
       var cur = (await this.get()).data() || {};
